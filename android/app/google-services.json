@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "353897292204",
+    "project_id": "billsense-625fe",
+    "storage_bucket": "billsense-625fe.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:353897292204:android:c098d2bbf237a71cd21a09",
+        "android_client_info": {
+          "package_name": "com.example.bill_scanner"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAYt_Md8x0MdluZwVYFGO32WqqEcXn6pyw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
