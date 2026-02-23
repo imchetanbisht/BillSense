@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -10,7 +9,7 @@ import 'savings_screen.dart';
 import 'tips_screen.dart';
 
 import '../bill_service.dart';
-import '../ocr_service.dart';   // ✅ OCR IMPORT
+import '../ocr_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -28,6 +27,8 @@ class _HomeScreenState extends State<HomeScreen>
   late Animation<double> _iconScale;
 
   late AnimationController _laserController;
+
+  final ImagePicker picker = ImagePicker();
 
   @override
   void initState() {
@@ -64,14 +65,24 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   /// ================= PICK IMAGE =================
-  Future pickImage(ImageSource source) async {
+  Future<void> pickImage(ImageSource source) async {
 
-    final picked = await ImagePicker().pickImage(source: source);
+    try {
 
-    if (picked != null) {
+      final picked = await picker.pickImage(source: source);
+
+      if (picked == null) return;
+
+      final file = File(picked.path);
+
+      if (!mounted) return;
+
       setState(() {
-        image = File(picked.path);
+        image = file;
       });
+
+    } catch (e) {
+      debugPrint("Image pick error: $e");
     }
   }
 
@@ -96,9 +107,7 @@ class _HomeScreenState extends State<HomeScreen>
     ];
 
     for (var word in keywords) {
-      if (text.contains(word)) {
-        return true;
-      }
+      if (text.contains(word)) return true;
     }
 
     return false;
@@ -116,7 +125,6 @@ class _HomeScreenState extends State<HomeScreen>
       return;
     }
 
-    /// OCR TEXT EXTRACT
     String text = await OCRService.extractText(image!);
 
     bool isBill = _isBillText(text);
@@ -135,7 +143,6 @@ class _HomeScreenState extends State<HomeScreen>
       return;
     }
 
-    /// VALID BILL → PROCESS
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -168,269 +175,259 @@ class _HomeScreenState extends State<HomeScreen>
     return Scaffold(
       backgroundColor: const Color(0xFF0B1220),
 
-      body: Stack(
-        children: [
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
 
-          /// FLOATING PARTICLES
-          const Positioned.fill(
-            child: ParticlesBackground(),
-          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
 
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+              /// HEADER
+              Row(
+                children:[
 
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-
-                  /// HEADER
-                  Row(
-                    children:[
-
-                      const CircleAvatar(
-                        radius: 26,
-                        backgroundColor: Color(0xFF6366F1),
-                        child: Icon(Icons.receipt_long,
-                            color: Colors.white),
-                      ),
-
-                      const SizedBox(width: 12),
-
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-
-                          Text(
-                            "BillSense AI",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-
-                          Text(
-                            "Smart Expense Tracker",
-                            style: TextStyle(
-                              color: Colors.white54,
-                              fontSize: 12,
-                            ),
-                          )
-                        ],
-                      )
-                    ],
+                  const CircleAvatar(
+                    radius: 26,
+                    backgroundColor: Color(0xFF6366F1),
+                    child: Icon(Icons.receipt_long,
+                        color: Colors.white),
                   ),
 
-                  const SizedBox(height: 30),
+                  const SizedBox(width: 12),
 
-                  /// SCAN CARD
-                  Container(
-                    padding: const EdgeInsets.all(22),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(26),
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.white.withOpacity(0.06),
-                          Colors.white.withOpacity(0.02),
-                        ],
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+
+                      Text(
+                        "BillSense AI",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      border: Border.all(
-                          color: Colors.white.withOpacity(0.08)),
+
+                      Text(
+                        "Smart Expense Tracker",
+                        style: TextStyle(
+                          color: Colors.white54,
+                          fontSize: 12,
+                        ),
+                      )
+                    ],
+                  )
+                ],
+              ),
+
+              const SizedBox(height: 30),
+
+              /// SCAN CARD
+              Container(
+                padding: const EdgeInsets.all(22),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(26),
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.white.withOpacity(0.06),
+                      Colors.white.withOpacity(0.02),
+                    ],
+                  ),
+                  border: Border.all(
+                      color: Colors.white.withOpacity(0.08)),
+                ),
+
+                child: Column(
+                  children: [
+
+                    /// ANIMATED ICON
+                    ScaleTransition(
+                      scale: _iconScale,
+                      child: _scannerIcon(),
                     ),
 
-                    child: Column(
+                    const SizedBox(height: 14),
+
+                    const Text(
+                      "Scan Your Bill",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    Row(
                       children: [
 
-                        /// ANIMATED ICON
-                        ScaleTransition(
-                          scale: _iconScale,
-                          child: _scannerIcon(),
+                        Expanded(
+                          child: premiumButton(
+                              Icons.camera_alt,
+                              "Camera",
+                                  () => pickImage(ImageSource.camera)),
                         ),
 
-                        const SizedBox(height: 14),
+                        const SizedBox(width: 12),
 
-                        const Text(
-                          "Scan Your Bill",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-
-                        const SizedBox(height: 18),
-
-                        Row(
-                          children: [
-
-                            Expanded(
-                              child: premiumButton(
-                                  Icons.camera_alt,
-                                  "Camera",
-                                      () => pickImage(ImageSource.camera)),
-                            ),
-
-                            const SizedBox(width: 12),
-
-                            Expanded(
-                              child: premiumButton(
-                                  Icons.upload_file,
-                                  "Upload",
-                                      () => pickImage(ImageSource.gallery)),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 18),
-
-                        /// IMAGE + LASER
-                        if (image != null)
-                          ClipRRect(
-                            borderRadius:
-                            BorderRadius.circular(14),
-                            child: Stack(
-                              children: [
-
-                                Image.file(
-                                  image!,
-                                  height: 160,
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
-                                ),
-
-                                AnimatedBuilder(
-                                  animation: _laserController,
-                                  builder: (_, __) {
-
-                                    return Positioned(
-                                      top: _laserController.value * 160,
-                                      left: 0,
-                                      right: 0,
-                                      child: Container(
-                                        height: 3,
-                                        decoration: BoxDecoration(
-                                          gradient:
-                                          const LinearGradient(
-                                            colors: [
-                                              Colors.transparent,
-                                              Colors.greenAccent,
-                                              Colors.transparent,
-                                            ],
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.greenAccent
-                                                  .withOpacity(0.7),
-                                              blurRadius: 8,
-                                            )
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                )
-                              ],
-                            ),
-                          ),
-
-                        const SizedBox(height: 16),
-
-                        ElevatedButton(
-                          onPressed: startScan,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                            const Color(0xFF6366F1),
-                            minimumSize:
-                            const Size(double.infinity, 50),
-                            shape: RoundedRectangleBorder(
-                              borderRadius:
-                              BorderRadius.circular(14),
-                            ),
-                          ),
-                          child: const Text(
-                            "Start AI Scan",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
+                        Expanded(
+                          child: premiumButton(
+                              Icons.upload_file,
+                              "Upload",
+                                  () => pickImage(ImageSource.gallery)),
                         ),
                       ],
                     ),
-                  ),
 
-                  const SizedBox(height: 30),
+                    const SizedBox(height: 18),
 
-                  const Text(
-                    "Features",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                    /// IMAGE + LASER
+                    if (image != null)
+                      ClipRRect(
+                        borderRadius:
+                        BorderRadius.circular(14),
+                        child: Stack(
+                          children: [
+
+                            Image.file(
+                              image!,
+                              height: 160,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
+
+                            AnimatedBuilder(
+                              animation: _laserController,
+                              builder: (_, __) {
+
+                                return Positioned(
+                                  top: _laserController.value * 160,
+                                  left: 0,
+                                  right: 0,
+                                  child: Container(
+                                    height: 3,
+                                    decoration: BoxDecoration(
+                                      gradient:
+                                      const LinearGradient(
+                                        colors: [
+                                          Colors.transparent,
+                                          Colors.greenAccent,
+                                          Colors.transparent,
+                                        ],
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.greenAccent
+                                              .withOpacity(0.7),
+                                          blurRadius: 8,
+                                        )
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            )
+                          ],
+                        ),
+                      ),
+
+                    const SizedBox(height: 16),
+
+                    ElevatedButton(
+                      onPressed: startScan,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                        const Color(0xFF6366F1),
+                        minimumSize:
+                        const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                          BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text(
+                        "Start AI Scan",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 30),
+
+              const Text(
+                "Features",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              Row(
+                children: [
+
+                  Expanded(
+                    child: featureCard(
+                      "Insights",
+                      "AI spending analysis",
+                      Icons.analytics,
+                          () => openScreen(const InsightScreen()),
                     ),
                   ),
 
-                  const SizedBox(height: 14),
+                  const SizedBox(width: 14),
 
-                  Row(
-                    children: [
-
-                      Expanded(
-                        child: featureCard(
-                          "Insights",
-                          "AI spending analysis",
-                          Icons.analytics,
-                              () => openScreen(const InsightScreen()),
-                        ),
-                      ),
-
-                      const SizedBox(width: 14),
-
-                      Expanded(
-                        child: featureCard(
-                          "Savings",
-                          "Future predictions",
-                          Icons.savings,
-                              () => openScreen(const SavingsScreen()),
-                        ),
-                      ),
-                    ],
+                  Expanded(
+                    child: featureCard(
+                      "Savings",
+                      "Future predictions",
+                      Icons.savings,
+                          () => openScreen(const SavingsScreen()),
+                    ),
                   ),
-
-                  const SizedBox(height: 14),
-
-                  Row(
-                    children: [
-
-                      Expanded(
-                        child: featureCard(
-                          "AI Tips",
-                          "Smart suggestions",
-                          Icons.lightbulb,
-                              () => openScreen(const TipsScreen()),
-                        ),
-                      ),
-
-                      const SizedBox(width: 14),
-
-                      Expanded(
-                        child: featureCard(
-                          "History",
-                          "All scanned bills",
-                          Icons.history,
-                              () => openScreen(const HistoryScreen()),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 40),
                 ],
               ),
-            ),
+
+              const SizedBox(height: 14),
+
+              Row(
+                children: [
+
+                  Expanded(
+                    child: featureCard(
+                      "AI Tips",
+                      "Smart suggestions",
+                      Icons.lightbulb,
+                          () => openScreen(const TipsScreen()),
+                    ),
+                  ),
+
+                  const SizedBox(width: 14),
+
+                  Expanded(
+                    child: featureCard(
+                      "History",
+                      "All scanned bills",
+                      Icons.history,
+                          () => openScreen(const HistoryScreen()),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 40),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -540,83 +537,4 @@ class _HomeScreenState extends State<HomeScreen>
       ),
     );
   }
-}
-
-/// ================= PARTICLES BACKGROUND =================
-
-class ParticlesBackground extends StatefulWidget {
-  const ParticlesBackground({super.key});
-
-  @override
-  State<ParticlesBackground> createState() =>
-      _ParticlesBackgroundState();
-}
-
-class _ParticlesBackgroundState
-    extends State<ParticlesBackground>
-    with SingleTickerProviderStateMixin {
-
-  late AnimationController _controller;
-
-  final List<Offset> particles = List.generate(
-      25, (_) => Offset(Random().nextDouble(),
-      Random().nextDouble()));
-
-  @override
-  void initState() {
-    super.initState();
-
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 20),
-    )..repeat();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (_, __) {
-
-        return CustomPaint(
-          painter: ParticlesPainter(
-              particles, _controller.value),
-        );
-      },
-    );
-  }
-}
-
-class ParticlesPainter extends CustomPainter {
-
-  final List<Offset> particles;
-  final double progress;
-
-  ParticlesPainter(this.particles, this.progress);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-
-    final paint = Paint()
-      ..color = Colors.white.withOpacity(0.05);
-
-    for (var p in particles) {
-
-      final dx =
-          (p.dx * size.width + progress * 50) %
-              size.width;
-
-      final dy =
-          (p.dy * size.height + progress * 30) %
-              size.height;
-
-      canvas.drawCircle(
-          Offset(dx, dy), 2, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) =>
-      true;
 }
