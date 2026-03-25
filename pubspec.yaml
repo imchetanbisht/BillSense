@@ -5,29 +5,47 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=2.17.0 <3.0.0'
+  sdk: '>=3.3.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  image_picker: ^0.8.7+4
-  http: 0.13.5
-  google_mlkit_text_recognition: ^0.11.0
-  intl: ^0.18.1
-  path_provider: ^2.0.15
-  fl_chart: ^0.55.2
-  google_fonts: ^4.0.4
-  lottie: ^1.4.3
-  firebase_core: ^2.15.0
-  firebase_auth: ^4.9.0
-  video_player: ^2.5.1
-  cupertino_icons: ^1.0.2
+
+  cupertino_icons: ^1.0.8
+
+  # Image & Scanner
+  image_picker: ^1.1.2
+  google_mlkit_text_recognition: ^0.14.0
+
+  # Network
+  http: ^1.2.2
+
+  # Storage & Files
+  path_provider: ^2.1.4
+
+  # UI & Design
+  google_fonts: ^6.2.1
+  lottie: ^3.1.0
+
+  # Charts
+  fl_chart: ^0.68.0
+
+  # Date & Format
+  intl: ^0.19.0
+
+  # Firebase (Aligned versions)
+  firebase_core: ^3.8.0
+  firebase_auth: ^5.4.0
+
+  # Video (optional if used)
+  video_player: ^2.9.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^2.0.0
-  flutter_launcher_icons: ^0.9.3
+
+  flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.13.1
 
 flutter_icons:
   android: true
