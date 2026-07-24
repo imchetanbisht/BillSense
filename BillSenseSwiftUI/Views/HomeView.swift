@@ -33,31 +33,24 @@ public struct HomeView: View {
                     VStack(alignment: .leading, spacing: 24) {
                         
                         // MARK: - Premium Top Bar Header
-                        HStack(spacing: 14) {
-                            // User Avatar with Online Status Indicator Ring
-                            ZStack(alignment: .bottomTrailing) {
+                        HStack(spacing: 12) {
+                            ZStack {
                                 Circle()
                                     .fill(Theme.Gradients.accentLinear)
-                                    .frame(width: 52, height: 52)
-                                    .overlay(
-                                        Image(systemName: "person.fill")
-                                            .font(.system(size: 24))
-                                            .foregroundColor(.white)
-                                    )
-                                    .shadow(color: Theme.Colors.accentIndigo.opacity(0.4), radius: 10, x: 0, y: 4)
+                                    .frame(width: 44, height: 44)
+                                    .shadow(color: Theme.Colors.accentIndigo.opacity(0.4), radius: 8, x: 0, y: 4)
                                 
-                                Circle()
-                                    .fill(Theme.Colors.accentEmerald)
-                                    .frame(width: 14, height: 14)
-                                    .overlay(Circle().stroke(Theme.Colors.backgroundPrimary, lineWidth: 2))
+                                Image(systemName: "receipt.fill")
+                                    .font(.system(size: 20, weight: .bold))
+                                    .foregroundColor(.white)
                             }
                             
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text("Hello, Alex 👋")
-                                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("BillSense AI")
+                                    .font(.system(size: 20, weight: .bold, design: .rounded))
                                     .foregroundColor(Theme.Colors.textPrimary)
                                 
-                                Text("BillSense AI Dashboard")
+                                Text("Smart Expense Analytics")
                                     .font(.caption)
                                     .fontWeight(.medium)
                                     .foregroundColor(Theme.Colors.textSecondary)

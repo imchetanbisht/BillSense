@@ -1,394 +1,317 @@
-import 'dart:io';
+import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
-import '../ai_report_service.dart';
+import 'bill_data.dart';
+import 'bill_service.dart';
+import 'ai_report_service.dart';
 
-class ReportScreen extends StatefulWidget {
-  final File image;
-  final double amount;
-  final String category;
-  final String extractedText;
+class ReportScreen extends StatelessWidget {
+  final BillData bill;
 
-  const ReportScreen({
-    super.key,
-    required this.image,
-    required this.amount,
-    required this.category,
-    required this.extractedText,
-  });
-
-  @override
-  State<ReportScreen> createState() => _ReportScreenState();
-}
-
-class _ReportScreenState extends State<ReportScreen> {
-
-  String insight = "";
-  String suggestion = "";
-  double predictedSaving = 0;
-  bool loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    loadAI();
-  }
-
-  Future<void> loadAI() async {
-
-    try {
-
-      final result = await AIReportService.generateReport(
-        amount: widget.amount,
-        category: widget.category,
-        extractedText: widget.extractedText,
-      );
-
-      insight = result["insight"] ?? "";
-      suggestion = result["suggestion"] ?? "";
-
-      predictedSaving = (result["saving"] is num)
-          ? (result["saving"] as num).toDouble()
-          : widget.amount * 0.25;
-
-    } catch (e) {
-
-      insight =
-      "Your spending pattern shows moderate behaviour in ${widget.category}.";
-      suggestion =
-      "Reducing unnecessary purchases by 10-15% may improve savings.";
-      predictedSaving = widget.amount * 0.25;
-    }
-
-    if (mounted) setState(() => loading = false);
-  }
+  const ReportScreen({super.key, required this.bill});
 
   @override
   Widget build(BuildContext context) {
+    final report = AIReportService.generateReport(bill);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
-
+      backgroundColor: const Color(0xFF0B1220),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text("AI Expense Report"),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          "AI Expense Report",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
       ),
-
-      body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Receipt Header Image Frame
+            Container(
+              height: 140,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF312E81), Color(0xFF4C1D95)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.description_rounded, size: 48, color: Colors.white70),
+                  SizedBox(height: 8),
+                  Text(
+                    "Scanned Receipt Processed",
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                  )
+                ],
+              ),
+            ),
 
+            const SizedBox(height: 20),
+
+            // Vendor & Extracted Final Total Header Card
             ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: Image.file(
-                widget.image,
-                height: 170,
-                width: double.infinity,
-                fit: BoxFit.cover,
+              borderRadius: BorderRadius.circular(22),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6366F1).withValues(alpha: 0.18),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.store_rounded, color: Color(0xFF6366F1), size: 28),
+                      ),
+
+                      const SizedBox(width: 14),
+
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            bill.vendorName,
+                            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            bill.category,
+                            style: const TextStyle(color: Color(0xFF6366F1), fontSize: 13, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+
+                      const Spacer(),
+
+                      Text(
+                        "₹${bill.amount.toInt()}",
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
 
             const SizedBox(height: 20),
 
-            _summaryCard(),
-            const SizedBox(height: 16),
-            _aiInsightCard(),
-            const SizedBox(height: 16),
-            _savingCard(),
+            // AI Insight & Smart Suggestion Box
+            ClipRRect(
+              borderRadius: BorderRadius.circular(22),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: const [
+                          Icon(Icons.auto_awesome, color: Color(0xFF6366F1), size: 20),
+                          SizedBox(width: 8),
+                          Text("AI Expense Insight", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        report.insightText,
+                        style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+                      ),
+
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 14),
+                        child: Divider(color: Colors.white12),
+                      ),
+
+                      Row(
+                        children: const [
+                          Icon(Icons.lightbulb_rounded, color: Colors.amberAccent, size: 20),
+                          SizedBox(width: 8),
+                          Text("Smart Suggestion", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        report.suggestionText,
+                        style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
             const SizedBox(height: 20),
 
-            _premiumChartCard(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// ================= PREMIUM CHART =================
-  Widget _premiumChartCard() {
-
-    double maxY = _calculateMaxY();
-
-    return Container(
-      height: 260,
-      padding: const EdgeInsets.all(16),
-      decoration: _cardDecoration(),
-      child: LineChart(
-        LineChartData(
-          minX: 0,
-          maxX: 2,
-          minY: 0,
-          maxY: maxY,
-
-          gridData: FlGridData(
-            show: true,
-            horizontalInterval: maxY / 5,
-            getDrawingHorizontalLine: (value) {
-              return FlLine(
-                color: Colors.white10,
-                strokeWidth: 1,
-              );
-            },
-          ),
-
-          borderData: FlBorderData(show: false),
-
-          titlesData: FlTitlesData(
-
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                interval: 1,
-                reservedSize: 34,
-                getTitlesWidget: (value, meta) {
-
-                  if (value % 1 != 0) {
-                    return const SizedBox();
-                  }
-
-                  switch (value.toInt()) {
-                    case 0:
-                      return _bottomLabel("Now", Alignment.centerLeft);
-                    case 1:
-                      return _bottomLabel("1 Month", Alignment.center);
-                    case 2:
-                      return _bottomLabel("2 Months", Alignment.centerLeft); // 👈 shifted left
-                  }
-
-                  return const SizedBox();
-                },
+            // Estimated Savings Callout Box
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: Colors.greenAccent.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.greenAccent.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.eco_rounded, color: Colors.greenAccent, size: 30),
+                  const SizedBox(width: 14),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text("Estimated 2-Month Savings", style: TextStyle(color: Colors.white54, fontSize: 12)),
+                      Text(
+                        "₹${report.predictedSavings.toInt()}",
+                        style: const TextStyle(color: Colors.greenAccent, fontSize: 22, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
 
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                interval: maxY / 5,
-                reservedSize: 40,
-                getTitlesWidget: (value, meta) {
+            const SizedBox(height: 24),
 
-                  return Text(
-                    "₹${value.toInt()}",
-                    style: const TextStyle(
-                      color: Colors.white54,
-                      fontSize: 10,
-                    ),
-                  );
-                },
+            // Savings Curve Chart Frame
+            ClipRRect(
+              borderRadius: BorderRadius.circular(22),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text("Predicted Savings Curve", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        height: 160,
+                        width: double.infinity,
+                        child: CustomPaint(
+                          painter: SavingsLineChartPainter(amount: bill.amount, savings: report.predictedSavings),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: const [
+                          Text("Now", style: TextStyle(color: Colors.white54, fontSize: 12)),
+                          Text("1 Month", style: TextStyle(color: Colors.white54, fontSize: 12)),
+                          Text("2 Months", style: TextStyle(color: Colors.white54, fontSize: 12)),
+                        ],
+                      )
+                    ],
+                  ),
+                ),
               ),
             ),
 
-            topTitles: AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
+            const SizedBox(height: 24),
 
-            rightTitles: AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-          ),
-
-          lineTouchData: LineTouchData(
-            touchTooltipData: LineTouchTooltipData(
-              getTooltipColor: (touchedSpot) => Colors.black87,
-              getTooltipItems: (spots) {
-                return spots.map((spot) {
-                  return LineTooltipItem(
-                    "₹${spot.y.toStringAsFixed(0)}",
-                    const TextStyle(color: Colors.white),
-                  );
-                }).toList();
+            // Save & Finish Button
+            ElevatedButton(
+              onPressed: () {
+                BillService.addBill(bill);
+                Navigator.pop(context);
               },
-            ),
-          ),
-
-          lineBarsData: [
-            LineChartBarData(
-              spots: [
-                FlSpot(0, widget.amount),
-                FlSpot(1, predictedSaving),
-                FlSpot(2, predictedSaving * 1.2),
-              ],
-              isCurved: true,
-              barWidth: 4,
-              color: Colors.greenAccent,
-
-              dotData: FlDotData(
-                show: true,
-                getDotPainter: (spot, percent, barData, index) {
-                  return FlDotCirclePainter(
-                    radius: 5,
-                    color: Colors.greenAccent,
-                    strokeWidth: 2,
-                    strokeColor: Colors.white,
-                  );
-                },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6366F1),
+                minimumSize: const Size(double.infinity, 54),
+                elevation: 8,
+                shadowColor: const Color(0xFF6366F1).withValues(alpha: 0.5),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
-
-              belowBarData: BarAreaData(
-                show: true,
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.greenAccent.withOpacity(0.3),
-                    Colors.greenAccent.withOpacity(0.05),
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
+              child: const Text(
+                "Save Bill & Finish",
+                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
+
+            const SizedBox(height: 30),
           ],
         ),
       ),
     );
   }
+}
 
-  double _calculateMaxY() {
+class SavingsLineChartPainter extends CustomPainter {
+  final double amount;
+  final double savings;
 
-    double maxValue = [
-      widget.amount,
-      predictedSaving,
-      predictedSaving * 1.2
-    ].reduce((a, b) => a > b ? a : b);
+  SavingsLineChartPainter({required this.amount, required this.savings});
 
-    return (maxValue * 1.4).ceilToDouble();
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.greenAccent
+      ..strokeWidth = 3.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final fillPaint = Paint()
+      ..shader = LinearGradient(
+        colors: [Colors.greenAccent.withValues(alpha: 0.3), Colors.transparent],
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    final path = Path();
+    final fillPath = Path();
+
+    double p1Y = size.height * 0.2;
+    double p2Y = size.height * 0.5;
+    double p3Y = size.height * 0.8;
+
+    path.moveTo(0, p1Y);
+    path.quadraticBezierTo(size.width * 0.5, p2Y, size.width, p3Y);
+
+    fillPath.moveTo(0, p1Y);
+    fillPath.quadraticBezierTo(size.width * 0.5, p2Y, size.width, p3Y);
+    fillPath.lineTo(size.width, size.height);
+    fillPath.lineTo(0, size.height);
+    fillPath.close();
+
+    canvas.drawPath(fillPath, fillPaint);
+    canvas.drawPath(path, paint);
+
+    final dotPaint = Paint()..color = Colors.greenAccent;
+    canvas.drawCircle(Offset(0, p1Y), 5, dotPaint);
+    canvas.drawCircle(Offset(size.width * 0.5, p2Y), 5, dotPaint);
+    canvas.drawCircle(Offset(size.width, p3Y), 5, dotPaint);
   }
 
-  Widget _bottomLabel(String text, Alignment alignment) {
-    return SizedBox(
-      width: 80,
-      child: Align(
-        alignment: alignment,
-        child: Text(
-          text,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// ================= SUMMARY =================
-  Widget _summaryCard() {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: _cardDecoration(),
-      child: Row(
-        children: [
-
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.indigo.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.wallet,
-                color: Colors.indigoAccent),
-          ),
-
-          const SizedBox(width: 14),
-
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-
-              Text(
-                widget.category,
-                style: const TextStyle(
-                    color: Colors.white54),
-              ),
-
-              Text(
-                "₹${widget.amount.toStringAsFixed(0)}",
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          )
-        ],
-      ),
-    );
-  }
-
-  Widget _aiInsightCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: _cardDecoration(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-
-          const Text(
-            "AI Insight",
-            style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold),
-          ),
-
-          const SizedBox(height: 8),
-
-          Text(
-            insight,
-            style: const TextStyle(
-                color: Colors.white70,
-                height: 1.4),
-          ),
-
-          const SizedBox(height: 14),
-
-          const Text(
-            "Suggestion",
-            style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold),
-          ),
-
-          const SizedBox(height: 6),
-
-          Text(
-            suggestion,
-            style: const TextStyle(
-                color: Colors.white70,
-                height: 1.4),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _savingCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: _cardDecoration(),
-      child: Text(
-        "Estimated Saving in next 2 months: ₹${predictedSaving.toStringAsFixed(0)}",
-        style: const TextStyle(color: Colors.white70),
-      ),
-    );
-  }
-
-  BoxDecoration _cardDecoration() {
-    return BoxDecoration(
-      gradient: LinearGradient(
-        colors: [
-          Colors.white.withOpacity(0.08),
-          Colors.white.withOpacity(0.02),
-        ],
-      ),
-      borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: Colors.white12),
-    );
-  }
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

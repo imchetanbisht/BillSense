@@ -1,345 +1,290 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
-import '../bill_service.dart';
-import 'package:intl/intl.dart';
+import 'bill_data.dart';
+import 'bill_service.dart';
 
 class InsightScreen extends StatelessWidget {
   const InsightScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-
-    final bills = BillService.bills;
-
-    if (bills.isEmpty) {
-      return const Scaffold(
-        backgroundColor: Color(0xFF0F172A),
-        body: Center(
-          child: Text(
-            "No Insights Yet\nScan a bill first",
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white54),
-          ),
-        ),
-      );
-    }
-
-    double total = bills.fold(0, (sum, b) => sum + b.amount);
-    double avg = total / bills.length;
-
-    double maxY = bills
-        .map((e) => e.amount)
-        .reduce((a, b) => a > b ? a : b);
-
-    /// padding for better view
-    maxY = maxY + (maxY * 0.3);
-
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
-
+      backgroundColor: const Color(0xFF0B1220),
       appBar: AppBar(
-        title: const Text("Insights"),
         backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: const Text(
+          "Spending Insights",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
       ),
+      body: ValueListenableBuilder<List<BillData>>(
+        valueListenable: BillService.billsNotifier,
+        builder: (context, bills, child) {
+          double totalSpent = BillService.totalSpending;
+          double avgSpent = BillService.averageSpending;
 
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-
-            /// ===== SUMMARY =====
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: _card(),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _stat("Total", "₹${total.toStringAsFixed(0)}"),
-                  _stat("Bills", bills.length.toString()),
-                  _stat("Average", "₹${avg.toStringAsFixed(0)}"),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 25),
-
-            /// ===== GRAPH =====
-            Container(
-              height: 300,
-              padding: const EdgeInsets.all(16),
-              decoration: _card(),
-              child: LineChart(
-                LineChartData(
-
-                  minX: 0,
-                  maxX: (bills.length - 1).toDouble() == 0
-                      ? 1
-                      : (bills.length - 1).toDouble(),
-
-                  minY: 0,
-                  maxY: maxY,
-
-                  gridData: FlGridData(
-                    show: true,
-                    drawVerticalLine: false,
-                    getDrawingHorizontalLine: (value) {
-                      return FlLine(
-                        color: Colors.white12,
-                        strokeWidth: 1,
-                      );
-                    },
-                  ),
-
-                  titlesData: FlTitlesData(
-
-                    leftTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 40,
-                        getTitlesWidget: (value, meta) {
-                          return Text(
-                            "₹${value.toInt()}",
-                            style: const TextStyle(
-                              color: Colors.white54,
-                              fontSize: 10,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        interval: 1,
-                        getTitlesWidget: (value, meta) {
-
-                          int index = value.toInt();
-
-                          if (index >= bills.length) {
-                            return const SizedBox();
-                          }
-
-                          String date =
-                          DateFormat('dd/MM')
-                              .format(bills[index].date);
-
-                          return Text(
-                            date,
-                            style: const TextStyle(
-                              color: Colors.white54,
-                              fontSize: 10,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-
-                    topTitles: AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-
-                    rightTitles: AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                  ),
-
-                  borderData: FlBorderData(show: false),
-
-                  lineBarsData: [
-
-                    LineChartBarData(
-                      spots: _buildSpots(bills),
-
-                      isCurved: true,
-                      barWidth: 4,
-                      color: const Color(0xFF6366F1),
-
-                      dotData: FlDotData(
-                        show: true,
-                        getDotPainter:
-                            (spot, percent, barData, index) {
-
-                          return FlDotCirclePainter(
-                            radius: 5,
-                            color: Colors.white,
-                            strokeWidth: 3,
-                            strokeColor:
-                            const Color(0xFF6366F1),
-                          );
-                        },
-                      ),
-
-                      belowBarData: BarAreaData(
-                        show: true,
-                        gradient: LinearGradient(
-                          colors: [
-                            const Color(0xFF6366F1)
-                                .withOpacity(0.4),
-                            Colors.transparent,
-                          ],
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                        ),
-                      ),
-                    )
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top Metric Cards Grid
+                Row(
+                  children: [
+                    Expanded(child: _statCard("Total Spent", "₹${totalSpent.toInt()}", Icons.wallet, const Color(0xFF6366F1))),
+                    const SizedBox(width: 12),
+                    Expanded(child: _statCard("Total Bills", "${bills.length}", Icons.receipt_long_rounded, Colors.purpleAccent)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _statCard("Average Bill", "₹${avgSpent.toInt()}", Icons.show_chart_rounded, Colors.cyanAccent)),
                   ],
+                ),
 
-                  lineTouchData: LineTouchData(
-                    touchTooltipData: LineTouchTooltipData(
-                      getTooltipItems: (spots) {
+                const SizedBox(height: 24),
 
-                        return spots.map((spot) {
-
-                          final bill =
-                          bills[spot.x.toInt()];
-
-                          return LineTooltipItem(
-                            "₹${bill.amount}\n${DateFormat('dd MMM').format(bill.date)}",
-                            const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
+                // Historical Spending Line & Area Graph Frame
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(22),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Spending Trajectory",
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            "Historical bill scan trend analysis",
+                            style: TextStyle(color: Colors.white54, fontSize: 12),
+                          ),
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            height: 180,
+                            width: double.infinity,
+                            child: CustomPaint(
+                              painter: SpendingTrendPainter(bills: bills),
                             ),
-                          );
-                        }).toList();
-                      },
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
 
-            const SizedBox(height: 25),
+                const SizedBox(height: 24),
 
-            /// ===== LIST =====
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: bills.length,
-              itemBuilder: (context, index) {
-
-                final bill = bills[index];
-
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 14),
-                  padding: const EdgeInsets.all(16),
-                  decoration: _card(),
-                  child: Row(
-                    children: [
-
-                      const Icon(Icons.receipt,
-                          color: Colors.white),
-
-                      const SizedBox(width: 12),
-
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment:
-                          CrossAxisAlignment.start,
-                          children: [
-
-                            Text(
-                              bill.category,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-
-                            Text(
-                              DateFormat('dd MMM yyyy')
-                                  .format(bill.date),
-                              style: const TextStyle(
-                                color: Colors.white54,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
+                // Category Donut Distribution Frame
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(22),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                       ),
-
-                      Text(
-                        "₹${bill.amount}",
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Category Breakdown",
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              SizedBox(
+                                height: 130,
+                                width: 130,
+                                child: CustomPaint(
+                                  painter: CategoryDonutPainter(bills: bills),
+                                ),
+                              ),
+                              const SizedBox(width: 20),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _categoryLegend("Grocery", BillService.categoryTotal("Grocery"), const Color(0xFF6366F1)),
+                                    const SizedBox(height: 8),
+                                    _categoryLegend("Utilities", BillService.categoryTotal("Utilities"), Colors.purpleAccent),
+                                    const SizedBox(height: 8),
+                                    _categoryLegend("Dining", BillService.categoryTotal("Dining"), Colors.orangeAccent),
+                                    const SizedBox(height: 8),
+                                    _categoryLegend("Medical", BillService.categoryTotal("Medical"), Colors.greenAccent),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                );
-              },
-            )
-          ],
-        ),
+                ),
+
+                const SizedBox(height: 80),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
-  /// CARD STYLE
-  BoxDecoration _card() {
-    return BoxDecoration(
-      gradient: LinearGradient(
-        colors: [
-          Colors.white.withOpacity(0.08),
-          Colors.white.withOpacity(0.02),
+  Widget _statCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(height: 10),
+          Text(value, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 2),
+          Text(title, style: const TextStyle(color: Colors.white54, fontSize: 11)),
         ],
       ),
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: Colors.white12),
     );
   }
 
-  /// SUMMARY STAT
-  Widget _stat(String title, String value) {
-    return Column(
+  Widget _categoryLegend(String category, double amount, Color color) {
+    return Row(
       children: [
-
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
-
-        const SizedBox(height: 4),
-
-        Text(
-          title,
-          style: const TextStyle(
-            color: Colors.white54,
-            fontSize: 12,
-          ),
-        ),
+        const SizedBox(width: 8),
+        Text(category, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+        const Spacer(),
+        Text("₹${amount.toInt()}", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
       ],
     );
   }
+}
 
-  /// GRAPH DATA
-  List<FlSpot> _buildSpots(List bills) {
+class SpendingTrendPainter extends CustomPainter {
+  final List<BillData> bills;
 
-    if (bills.length == 1) {
-      /// center single point
-      return [
-        FlSpot(0, bills[0].amount),
-        FlSpot(1, bills[0].amount),
-      ];
-    }
+  SpendingTrendPainter({required this.bills});
 
-    List<FlSpot> spots = [];
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (bills.isEmpty) return;
+
+    final paint = Paint()
+      ..color = const Color(0xFF6366F1)
+      ..strokeWidth = 3.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final fillPaint = Paint()
+      ..shader = LinearGradient(
+        colors: [const Color(0xFF6366F1).withValues(alpha: 0.35), Colors.transparent],
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    final path = Path();
+    final fillPath = Path();
+
+    double stepX = size.width / (bills.length > 1 ? (bills.length - 1) : 1);
+    double maxAmt = bills.map((b) => b.amount).reduce((a, b) => a > b ? a : b);
+    if (maxAmt <= 0) maxAmt = 1.0;
 
     for (int i = 0; i < bills.length; i++) {
-      spots.add(
-        FlSpot(
-          i.toDouble(),
-          bills[i].amount.toDouble(),
-        ),
-      );
+      double x = i * stepX;
+      double y = size.height - (bills[i].amount / maxAmt * (size.height * 0.7) + size.height * 0.15);
+
+      if (i == 0) {
+        path.moveTo(x, y);
+        fillPath.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+        fillPath.lineTo(x, y);
+      }
+
+      canvas.drawCircle(Offset(x, y), 4.5, Paint()..color = const Color(0xFF6366F1));
     }
 
-    return spots;
+    fillPath.lineTo(size.width, size.height);
+    fillPath.lineTo(0, size.height);
+    fillPath.close();
+
+    canvas.drawPath(fillPath, fillPaint);
+    canvas.drawPath(path, paint);
   }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+class CategoryDonutPainter extends CustomPainter {
+  final List<BillData> bills;
+
+  CategoryDonutPainter({required this.bills});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    double total = bills.fold(0.0, (sum, b) => sum + b.amount);
+    if (total <= 0) return;
+
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+
+    double startAngle = -1.57;
+
+    final categories = [
+      {"cat": "Grocery", "color": const Color(0xFF6366F1)},
+      {"cat": "Utilities", "color": Colors.purpleAccent},
+      {"cat": "Dining", "color": Colors.orangeAccent},
+      {"cat": "Medical", "color": Colors.greenAccent},
+    ];
+
+    for (var c in categories) {
+      double sum = bills
+          .where((b) => b.category.toLowerCase() == (c["cat"] as String).toLowerCase())
+          .fold(0.0, (s, b) => s + b.amount);
+      if (sum <= 0) continue;
+
+      double sweepAngle = (sum / total) * 6.28;
+
+      final paint = Paint()
+        ..color = c["color"] as Color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 18;
+
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius - 10),
+        startAngle,
+        sweepAngle,
+        false,
+        paint,
+      );
+
+      startAngle += sweepAngle;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

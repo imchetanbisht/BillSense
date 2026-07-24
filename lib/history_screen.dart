@@ -1,6 +1,8 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
-import '../bill_service.dart';
-import '../bill_data.dart';
+import 'bill_data.dart';
+import 'bill_service.dart';
+import 'report_screen.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -10,258 +12,215 @@ class HistoryScreen extends StatefulWidget {
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
+  String _searchQuery = "";
+  String? _selectedCategory;
+
+  final List<String> _categories = [
+    "All", "Grocery", "Utilities", "Dining", "Medical", "Shopping"
+  ];
 
   @override
   Widget build(BuildContext context) {
-
-    final bills = BillService.bills;
-
-    /// EMPTY STATE
-    if (bills.isEmpty) {
-      return Scaffold(
-        backgroundColor: const Color(0xFF0F172A),
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          title: const Text("History"),
-        ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-
-              Icon(
-                Icons.receipt_long,
-                color: Colors.white24,
-                size: 70,
-              ),
-
-              SizedBox(height: 12),
-
-              Text(
-                "No Bills Scanned Yet",
-                style: TextStyle(
-                  color: Colors.white54,
-                  fontSize: 16,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    /// GROUP BY DATE
-    Map<String, List<BillModel>> grouped = {};
-
-    for (var bill in bills) {
-
-      String dateKey =
-          "${bill.date.day}/${bill.date.month}/${bill.date.year}";
-
-      grouped.putIfAbsent(dateKey, () => []).add(bill);
-    }
-
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
-
+      backgroundColor: const Color(0xFF0B1220),
       appBar: AppBar(
-        title: const Text("History"),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        title: const Text(
+          "Scan History",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
       ),
-
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: grouped.entries.map((entry) {
+      body: ValueListenableBuilder<List<BillData>>(
+        valueListenable: BillService.billsNotifier,
+        builder: (context, bills, child) {
+          final filtered = bills.where((b) {
+            final matchesQuery = b.vendorName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                b.category.toLowerCase().contains(_searchQuery.toLowerCase());
+            final matchesCategory = _selectedCategory == null ||
+                _selectedCategory == "All" ||
+                b.category.toLowerCase() == _selectedCategory!.toLowerCase();
+            return matchesQuery && matchesCategory;
+          }).toList();
 
           return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
-              /// DATE HEADER
-              Text(
-                entry.key,
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+              // Search Bar
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                  ),
+                  child: TextField(
+                    onChanged: (val) => setState(() => _searchQuery = val),
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      icon: Icon(Icons.search_rounded, color: Colors.white54),
+                      hintText: "Search merchant or category...",
+                      hintStyle: TextStyle(color: Colors.white38, fontSize: 13),
+                      border: InputBorder.none,
+                    ),
+                  ),
                 ),
               ),
 
-              const SizedBox(height: 12),
-
-              ...entry.value.map((bill) {
-
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [
-                        Color(0xFF1E293B),
-                        Color(0xFF020617),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: Colors.white12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 10,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-
-                      /// ICON
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.indigo.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
+              // Category Filter Chips
+              SizedBox(
+                height: 48,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: _categories.length,
+                  itemBuilder: (context, index) {
+                    final cat = _categories[index];
+                    final isSelected = (_selectedCategory == null && cat == "All") || _selectedCategory == cat;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(cat),
+                        selected: isSelected,
+                        selectedColor: const Color(0xFF6366F1),
+                        backgroundColor: Colors.white.withValues(alpha: 0.05),
+                        labelStyle: TextStyle(
+                          color: isSelected ? Colors.white : Colors.white70,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
                         ),
-                        child: const Icon(
-                          Icons.receipt,
-                          color: Colors.indigo,
-                        ),
+                        side: BorderSide(color: isSelected ? const Color(0xFF6366F1) : Colors.white12),
+                        onSelected: (selected) {
+                          setState(() {
+                            _selectedCategory = selected ? cat : "All";
+                          });
+                        },
                       ),
+                    );
+                  },
+                ),
+              ),
 
-                      const SizedBox(width: 14),
+              const SizedBox(height: 10),
 
-                      /// DETAILS
-                      Expanded(
+              // List of Scanned Bills
+              Expanded(
+                child: filtered.isEmpty
+                    ? Center(
                         child: Column(
-                          crossAxisAlignment:
-                          CrossAxisAlignment.start,
-                          children: [
-
-                            Text(
-                              bill.category,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-
-                            const SizedBox(height: 4),
-
-                            Text(
-                              _formatTime(bill.date),
-                              style: const TextStyle(
-                                color: Colors.white54,
-                                fontSize: 12,
-                              ),
-                            ),
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(Icons.receipt_long_rounded, size: 64, color: Colors.white24),
+                            SizedBox(height: 14),
+                            Text("No Scanned Bills Found", style: TextStyle(color: Colors.white70, fontSize: 18, fontWeight: FontWeight.bold)),
+                            SizedBox(height: 6),
+                            Text("Scan a receipt to start building your history", style: TextStyle(color: Colors.white38, fontSize: 12)),
                           ],
                         ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        itemCount: filtered.length,
+                        itemBuilder: (context, index) {
+                          final bill = filtered[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(18),
+                              child: BackdropFilter(
+                                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                                child: Container(
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.04),
+                                    borderRadius: BorderRadius.circular(18),
+                                    border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                                  ),
+                                  child: ListTile(
+                                    contentPadding: EdgeInsets.zero,
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(builder: (_) => ReportScreen(bill: bill)),
+                                      );
+                                    },
+                                    leading: Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF6366F1).withValues(alpha: 0.18),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(Icons.receipt_rounded, color: Color(0xFF6366F1), size: 22),
+                                    ),
+                                    title: Text(
+                                      bill.vendorName,
+                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                                    ),
+                                    subtitle: Text(
+                                      "${bill.category} • ${_formatDate(bill.date)}",
+                                      style: const TextStyle(color: Colors.white54, fontSize: 12),
+                                    ),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          "₹${bill.amount.toInt()}",
+                                          style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 17),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                                          onPressed: () {
+                                            _confirmDelete(context, bill);
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
+              ),
 
-                      /// AMOUNT
-                      Text(
-                        "₹${bill.amount.toStringAsFixed(0)}",
-                        style: const TextStyle(
-                          color: Colors.greenAccent,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-
-                      const SizedBox(width: 10),
-
-                      /// DELETE BUTTON
-                      InkWell(
-                        onTap: () => _deleteBill(bill),
-                        borderRadius: BorderRadius.circular(10),
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(
-                            Icons.delete_outline,
-                            color: Colors.redAccent,
-                            size: 20,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
-
-              const SizedBox(height: 20),
+              const SizedBox(height: 80),
             ],
           );
-        }).toList(),
+        },
       ),
     );
   }
 
-  /// DELETE SINGLE BILL
-  void _deleteBill(BillModel bill) {
-
-    showDialog(
-      context: context,
-      builder: (context) {
-
-        return AlertDialog(
-          backgroundColor: const Color(0xFF020617),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Text(
-            "Delete Bill",
-            style: TextStyle(color: Colors.white),
-          ),
-          content: const Text(
-            "Do you want to delete this bill?",
-            style: TextStyle(color: Colors.white70),
-          ),
-          actions: [
-
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text(
-                "Cancel",
-                style: TextStyle(color: Colors.white54),
-              ),
-            ),
-
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
-              ),
-              onPressed: () {
-
-                BillService.bills.remove(bill);
-
-                Navigator.pop(context);
-
-                setState(() {});
-              },
-              child: const Text("Delete"),
-            ),
-          ],
-        );
-      },
-    );
+  String _formatDate(DateTime date) {
+    return "${date.day}/${date.month}/${date.year}";
   }
 
-  /// FORMAT TIME
-  static String _formatTime(DateTime date) {
-
-    int hour = date.hour;
-    int minute = date.minute;
-
-    String period = hour >= 12 ? "PM" : "AM";
-
-    hour = hour % 12;
-    if (hour == 0) hour = 12;
-
-    return "$hour:${minute.toString().padLeft(2, '0')} $period";
+  void _confirmDelete(BuildContext context, BillData bill) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF0F172A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text("Delete Bill", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Text("Are you sure you want to delete the bill for ${bill.vendorName} (₹${bill.amount.toInt()})?", style: const TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Cancel", style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              BillService.deleteBill(bill);
+              Navigator.pop(ctx);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            child: const Text("Delete", style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 }

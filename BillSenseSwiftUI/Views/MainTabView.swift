@@ -93,7 +93,7 @@ public struct MainTabView: View {
             )
             .shadow(color: Color.black.opacity(0.4), radius: 20, x: 0, y: 10)
             .padding(.horizontal, Theme.Layout.paddingStandard)
-            .padding(.bottom, 14)
+            .padding(.bottom, 8)
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
     }

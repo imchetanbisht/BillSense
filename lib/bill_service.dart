@@ -1,111 +1,64 @@
-class BillModel {
-
-  final double amount;
-  final String category;
-  final DateTime date;
-  final String imagePath;
-
-  BillModel({
-    required this.amount,
-    required this.category,
-    required this.date,
-    required this.imagePath,
-  });
-}
+import 'package:flutter/material.dart';
+import 'bill_data.dart';
 
 class BillService {
+  static final ValueNotifier<List<BillData>> billsNotifier = ValueNotifier<List<BillData>>([
+    BillData(
+      vendorName: "Supermarket Mart",
+      amount: 1450.0,
+      date: DateTime.now().subtract(const Duration(days: 1)),
+      category: "Grocery",
+    ),
+    BillData(
+      vendorName: "Electricity Board",
+      amount: 2300.0,
+      date: DateTime.now().subtract(const Duration(days: 3)),
+      category: "Utilities",
+    ),
+    BillData(
+      vendorName: "City Pharmacy",
+      amount: 680.0,
+      date: DateTime.now().subtract(const Duration(days: 5)),
+      category: "Medical",
+    ),
+    BillData(
+      vendorName: "Urban Diner",
+      amount: 1120.0,
+      date: DateTime.now().subtract(const Duration(days: 7)),
+      category: "Dining",
+    ),
+  ]);
 
-  /// 🔥 All scanned bills
-  static final List<BillModel> _bills = [];
+  static List<BillData> get bills => billsNotifier.value;
 
-  /// Public getter
-  static List<BillModel> get bills => _bills;
+  static bool get hasData => billsNotifier.value.isNotEmpty;
 
-  /// ===============================
-  /// 🔥 ADD OR UPDATE BILL (NO DUPLICATE)
-  /// ===============================
-  static void addOrUpdateBill({
-    required double amount,
-    required String category,
-    required String imagePath,
-  }) {
-
-    int index =
-    _bills.indexWhere((bill) => bill.imagePath == imagePath);
-
-    if (index != -1) {
-
-      /// UPDATE EXISTING
-      _bills[index] = BillModel(
-        amount: amount,
-        category: category,
-        date: DateTime.now(),
-        imagePath: imagePath,
-      );
-
-    } else {
-
-      /// ADD NEW
-      _bills.add(
-        BillModel(
-          amount: amount,
-          category: category,
-          date: DateTime.now(),
-          imagePath: imagePath,
-        ),
-      );
-    }
+  static void addBill(BillData bill) {
+    final updated = List<BillData>.from(billsNotifier.value)..insert(0, bill);
+    billsNotifier.value = updated;
   }
 
-  /// ===============================
-  /// 🔥 LAST SCANNED BILL
-  /// ===============================
-  static BillModel? get latestBill {
-
-    if (_bills.isEmpty) return null;
-
-    return _bills.last;
+  static void deleteBill(BillData bill) {
+    final updated = List<BillData>.from(billsNotifier.value)..removeWhere((b) => b.id == bill.id);
+    billsNotifier.value = updated;
   }
 
-  /// ===============================
-  /// 🔥 TOTAL SPENDING
-  /// ===============================
-  static double get totalAmount {
-
-    double total = 0;
-
-    for (var bill in _bills) {
-      total += bill.amount;
-    }
-
-    return total;
+  static double get totalSpending {
+    return billsNotifier.value.fold(0.0, (sum, item) => sum + item.amount);
   }
 
-  /// ===============================
-  /// 🔥 CATEGORY TOTAL
-  /// ===============================
-  static Map<String, double> get categoryTotals {
-
-    Map<String, double> map = {};
-
-    for (var bill in _bills) {
-
-      map[bill.category] =
-          (map[bill.category] ?? 0) + bill.amount;
-    }
-
-    return map;
+  static double get averageSpending {
+    if (billsNotifier.value.isEmpty) return 0.0;
+    return totalSpending / billsNotifier.value.length;
   }
 
-  /// ===============================
-  /// 🔥 HAS DATA
-  /// ===============================
-  static bool get hasData => _bills.isNotEmpty;
+  static double get totalEstimatedSavings {
+    return totalSpending * 0.22;
+  }
 
-  /// ===============================
-  /// 🔥 CLEAR ALL (optional reset)
-  /// ===============================
-  static void clear() {
-    _bills.clear();
+  static double categoryTotal(String category) {
+    return billsNotifier.value
+        .where((b) => b.category.toLowerCase() == category.toLowerCase())
+        .fold(0.0, (sum, b) => sum + b.amount);
   }
 }
